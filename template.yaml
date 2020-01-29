@@ -7,10 +7,17 @@ Globals:
     Timeout: 3
 
 Resources:
-  IsCrawlerFunction:
+  HttpHeaderFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: is-crawler/
+      CodeUri: http-header/
+      Role: !GetAtt LambdaEdgeFunctionRole.Arn
+      Handler: app.lambdaHandler
+      Runtime: nodejs10.x
+  RedirectCrawlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: redirect-crawler/
       Role: !GetAtt LambdaEdgeFunctionRole.Arn
       Handler: app.lambdaHandler
       Runtime: nodejs10.x
@@ -36,6 +43,9 @@ Resources:
         
 
 Outputs:
-  IsCrawlerFunction:
-    Description: "Is CrawlerLambda Function ARN"
-    Value: !GetAtt IsCrawlerFunction.Arn
+  HttpHeaderFunction:
+    Description: "Is Crawler Http Header Lambda Function ARN"
+    Value: !GetAtt HttpHeaderFunction.Arn
+  RedirectCrawlerFunction:
+    Description: "RedirectCrawlerLambda Function ARN"
+    Value: !GetAtt RedirectCrawlerFunction.Arn

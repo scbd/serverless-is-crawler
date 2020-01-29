@@ -1,6 +1,6 @@
 'use strict';
 
-const app = require('../../app.js');
+const app = require('../../app.js.js');
 const chai = require('chai');
 const expect = chai.expect;
 var event, context;
@@ -16,7 +16,7 @@ describe('Tests index', function () {
         let response = JSON.parse(result.body);
 
         expect(response).to.be.an('object');
-        expect(response.message).to.be.equal("is crawler");
+        expect(response.message).to.be.equal("crawler request");
         // expect(response.location).to.be.an("string");
     });
 });

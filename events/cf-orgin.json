@@ -1,0 +1,46 @@
+{
+    "Records": [
+      {
+        "cf": {
+          "config": {
+            "distributionDomainName": "d123.cloudfront.net",
+            "distributionId": "EDFDVBD6EXAMPLE",
+            "eventType": "viewer-request",
+            "requestId": "MRVMF7KydIvxMWfJIglgwHQwZsbG2IhRJ07sn9AkKUFSHS9EXAMPLE=="
+          },
+          "request": {
+            "body": {
+              "action": "read-only",
+              "data": "eyJ1c2VybmFtZSI6IkxhbWJkYUBFZGdlIiwiY29tbWVudCI6IlRoaXMgaXMgcmVxdWVzdCBib2R5In0=",
+              "encoding": "base64",
+              "inputTruncated": false
+            },
+            "clientIp": "2001:0db8:85a3:0:0:8a2e:0370:7334",
+            "querystring": "size=large",
+            "uri": "/conferences/2020/documents",
+            "method": "GET",
+            "headers": {
+              "host": [
+                {
+                  "key": "Host",
+                  "value": "absch.cbd.int"
+                }
+              ],
+              "user-agent": [
+                {
+                  "key": "User-Agent",
+                  "value": "curl/7.51.0"
+                }
+              ],
+              "x-is-crawler": [
+                {
+                  "key": "X-Is-Crawler",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        }
+      }
+    ]
+  }

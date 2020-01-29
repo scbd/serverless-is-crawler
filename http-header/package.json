@@ -1,5 +1,5 @@
 {
-  "name": "is_crawler",
+  "name": "serverless_is_crawler",
   "version": "1.0.0",
   "description": "Adds is crawler header to a cloud-front request",
   "main": "app.js",
