@@ -20,7 +20,7 @@ exports.lambdaHandler = (event, context, callback) => {
     }
     
     // request targets non-html files
-    if (request.uri.match(/\.(js|json|css|xml|less|png|jpg|jpeg|gif|pdf|txt|ico|rss|zip|mp3|rar|exe|wmv|doc|xls|ppt|docx|xlsx|pptx|avi|mpg|mpeg|tif|wav|mov|psd|ai|mp4|m4a|swf|dat|dmg|iso|flv|m4v|torrent|ttf|woff|svg|eot)/i)) {
+    if (request.uri.match(/\.(html|js|json|css|xml|less|png|jpg|jpeg|gif|pdf|txt|ico|rss|zip|mp3|rar|exe|wmv|doc|xls|ppt|docx|xlsx|pptx|avi|mpg|mpeg|tif|wav|mov|psd|ai|mp4|m4a|swf|dat|dmg|iso|flv|m4v|torrent|ttf|woff|svg|eot)/i)) {
       prerender = false;
     }
     
