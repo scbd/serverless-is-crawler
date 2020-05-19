@@ -8,6 +8,7 @@ exports.lambdaHandler = async (event, context, callback) => {
         
     try{    
         let isPrerender;
+        let userAgent       = request['headers']['user-agent'][0].value;
         
         if ('x-is-prerenderr' in request['headers']) {
             isPrerender = request['headers']['x-is-prerender'][0].value  === 'true';
@@ -15,19 +16,23 @@ exports.lambdaHandler = async (event, context, callback) => {
         
         if(!isPrerender){
                             
-            let userAgent       = request['headers']['user-agent'][0].value;
             let CrawlerDetector = new Crawler(request);        
-            let httpHeader       = CrawlerDetector.isCrawler(userAgent);
+            let httpIsCrawler   = CrawlerDetector.isCrawler(userAgent);
             
-            if(httpHeader){
+            if(httpIsCrawler){
                 request['headers']['X-Is-Crawler'] = [{
                     key: 'X-Is-Crawler',
-                    value: httpHeader.toString()
+                    value: httpIsCrawler.toString()
+                }];
+
+                request['headers']['X-Origin-User-Agent'] = [{
+                    key: 'X-Origin-User-Agent',
+                    value: userAgent.toString()
                 }];
             }
         
         }
-            
+
     }
     catch(err){
         console.error(err)
