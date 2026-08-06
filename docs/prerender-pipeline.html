@@ -392,7 +392,7 @@
         <circle cx="1170" cy="65" r="22" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.4" />
         <use href="#icon-render" x="1159" y="54" width="22" height="22" color="var(--accent-ink)" />
         <text x="1170" y="113" text-anchor="middle" font-size="14" font-weight="700" fill="var(--accent-ink)">Prerender service</text>
-        <text x="1170" y="131" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--accent-ink)">prerender.infra.cbd.int</text>
+        <text x="1170" y="131" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--accent-ink)">url-to-html-api</text>
         <text x="1170" y="148" text-anchor="middle" font-size="10.5" fill="var(--accent-ink)" opacity="0.85">renders via headless browser</text>
         <text x="1170" y="162" text-anchor="middle" font-size="10.5" fill="var(--accent-ink)" opacity="0.85">(url &rarr; HTML), returns markup</text>
 
@@ -452,15 +452,15 @@
         <li>Blocks known bad-spider UAs (403) and duplicate or malformed <code>countries</code>/<code>kb</code> paths (404) before anything else runs.</li>
         <li>Requires <code>X-Is-Crawler: true</code> <em>and</em> <code>prerender</code> still eligible to act.</li>
         <li>Eligibility drops to false for non-HTML asset extensions, when <code>x-is-prerender</code> or <code>x-prerender</code> says so, or — on <code>www.cbd.int</code> — outside the allow-listed SPA sections.</li>
-        <li>When still eligible, rewrites the origin to <code>prerender.infra.cbd.int</code> with path <code>/api/render-html?_escaped_fragment_=true&amp;url=…</code>.</li>
+        <li>When still eligible, rewrites the origin to the prerender service with path <code>/api/render-html?_escaped_fragment_=true&amp;url=…</code>.</li>
       </ul>
     </div>
   </div>
 
   <h2>Inside the prerender service</h2>
   <p class="section-lede">
-    <code>prerender.infra.cbd.int</code> is a small Express app (<code>url-to-html-api</code>) wrapped around
-    one shared headless Chrome instance, not a request-per-invocation function.
+    The prerender service is a small Express app (<code>url-to-html-api</code>) wrapped around one shared
+    headless Chrome instance, not a request-per-invocation function.
   </p>
 
   <figure>
