@@ -1,0 +1,605 @@
+<title>Crawler prerender pipeline</title>
+<style>
+  :root {
+    --bg: #eef1f4;
+    --surface: #ffffff;
+    --border: #d6dce2;
+    --ink: #1b232c;
+    --ink-dim: #64707c;
+    --accent: #c17a1f;
+    --accent-soft: #f4e3c8;
+    --accent-ink: #7a4c10;
+    --block: #a24a4a;
+    --block-soft: #f4dcdc;
+    --font-sans: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14181c;
+      --surface: #1c2126;
+      --border: #2c333a;
+      --ink: #e4e8ec;
+      --ink-dim: #8b96a1;
+      --accent: #e0973f;
+      --accent-soft: #3a2c17;
+      --accent-ink: #f2b869;
+      --block: #d17d7d;
+      --block-soft: #3a2323;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14181c;
+    --surface: #1c2126;
+    --border: #2c333a;
+    --ink: #e4e8ec;
+    --ink-dim: #8b96a1;
+    --accent: #e0973f;
+    --accent-soft: #3a2c17;
+    --accent-ink: #f2b869;
+    --block: #d17d7d;
+    --block-soft: #3a2323;
+  }
+  :root[data-theme="light"] {
+    --bg: #eef1f4;
+    --surface: #ffffff;
+    --border: #d6dce2;
+    --ink: #1b232c;
+    --ink-dim: #64707c;
+    --accent: #c17a1f;
+    --accent-soft: #f4e3c8;
+    --accent-ink: #7a4c10;
+    --block: #a24a4a;
+    --block-soft: #f4dcdc;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    line-height: 1.55;
+  }
+  main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 56px 24px 80px;
+  }
+  .eyebrow {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    margin: 0 0 10px;
+  }
+  h1 {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    margin: 0 0 12px;
+  }
+  .dek {
+    font-size: 16px;
+    color: var(--ink-dim);
+    max-width: 640px;
+    margin: 0 0 40px;
+  }
+  .dek code {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+    color: var(--ink);
+  }
+
+  figure {
+    margin: 0 0 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 8px 4px;
+  }
+  .diagram-scroll {
+    overflow-x: auto;
+  }
+  svg { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+  figcaption {
+    font-size: 13px;
+    color: var(--ink-dim);
+    padding: 16px 18px 6px;
+    border-top: 1px solid var(--border);
+    margin-top: 16px;
+  }
+
+  .note {
+    font-size: 13px;
+    color: var(--ink-dim);
+    margin: 0 0 48px;
+  }
+  .note code {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+    color: var(--ink);
+  }
+
+  h2 {
+    font-size: 19px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    letter-spacing: -0.005em;
+  }
+  .section-lede {
+    font-size: 13.5px;
+    color: var(--ink-dim);
+    margin: 0 0 20px;
+  }
+
+  .hop-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin: 0 0 48px;
+  }
+  @media (max-width: 620px) {
+    .hop-grid { grid-template-columns: 1fr; }
+  }
+  .hop-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .hop-card .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    color: var(--ink-dim);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 3px 8px 3px 6px;
+    margin-bottom: 10px;
+  }
+  .hop-card .tag svg { width: 12px; height: 12px; flex-shrink: 0; }
+  .hop-card h3 {
+    font-size: 15px;
+    margin: 0 0 3px;
+  }
+  .hop-card .fn-name {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-dim);
+    margin: 0 0 12px;
+  }
+  .hop-card ul {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 13.5px;
+  }
+  .hop-card li { margin-bottom: 6px; }
+  .hop-card li:last-child { margin-bottom: 0; }
+  .hop-card code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .table-wrap { overflow-x: auto; border-radius: 10px; }
+  thead th {
+    text-align: left;
+    font-size: 11.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    font-weight: 600;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.hdr { font-family: var(--font-mono); font-size: 12.5px; white-space: nowrap; color: var(--ink); }
+  td.set-by { color: var(--ink-dim); white-space: nowrap; }
+  td.purpose { color: var(--ink); }
+
+  footer {
+    margin-top: 56px;
+    font-size: 12px;
+    color: var(--ink-dim);
+  }
+</style>
+
+<main>
+  <p class="eyebrow">CloudFront &middot; Lambda@Edge</p>
+  <h1>How a request becomes a prerendered page</h1>
+  <p class="dek">
+    Every site sits behind one CloudFront distribution with two Lambda@Edge functions on the default
+    behavior: <code>serverless-is-crawler-Http</code> on <strong>viewer request</strong>, and
+    <code>serverless-is-crawler-Redirect</code> on <strong>origin request</strong>. Together they decide,
+    per request, whether CloudFront fetches the page from the real origin or from the prerender service.
+  </p>
+
+  <figure>
+    <div class="diagram-scroll">
+      <svg viewBox="0 0 1360 480" role="img" aria-label="A request enters CloudFront, passes through the viewer-request Lambda which tags crawler traffic, then the origin-request Lambda which routes crawler-and-eligible requests to the prerender service, everything else to the origin server, and bad bots or bad paths to a blocked response.">
+
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+          </marker>
+          <marker id="arrowAccent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)" />
+          </marker>
+          <marker id="arrowBlock" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--block)" />
+          </marker>
+
+          <filter id="cardShadow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="1.5" stdDeviation="2.2" flood-color="#000000" flood-opacity="0.16" />
+          </filter>
+
+          <g id="icon-browser" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2.2" />
+            <line x1="2" y1="9.2" x2="22" y2="9.2" />
+            <circle cx="5.6" cy="6.6" r="0.85" fill="currentColor" stroke="none" />
+          </g>
+
+          <g id="icon-network" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <circle cx="12" cy="12" r="2.3" />
+            <circle cx="12" cy="3.6" r="1.7" />
+            <circle cx="20.4" cy="12" r="1.7" />
+            <circle cx="12" cy="20.4" r="1.7" />
+            <circle cx="3.6" cy="12" r="1.7" />
+            <line x1="12" y1="9.8" x2="12" y2="5.4" />
+            <line x1="14.2" y1="12" x2="18.5" y2="12" />
+            <line x1="12" y1="14.2" x2="12" y2="18.5" />
+            <line x1="9.8" y1="12" x2="5.5" y2="12" />
+          </g>
+
+          <g id="icon-bolt" fill="currentColor" stroke="none">
+            <polygon points="13,1.5 4.5,14 10.8,14 9,22.5 19,9.5 12.2,9.5" />
+          </g>
+
+          <g id="icon-render" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3.5" width="20" height="13.5" rx="2" />
+            <line x1="8.6" y1="21" x2="15.4" y2="21" />
+            <line x1="12" y1="17" x2="12" y2="21" />
+            <polygon points="9.6,7.2 9.6,13.3 15.2,10.25" fill="currentColor" stroke="none" />
+          </g>
+
+          <g id="icon-server" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2.5" y="2.5" width="19" height="6" rx="1.5" />
+            <rect x="2.5" y="10" width="19" height="6" rx="1.5" />
+            <rect x="2.5" y="17.5" width="19" height="4" rx="1.2" />
+            <circle cx="6" cy="5.5" r="0.85" fill="currentColor" stroke="none" />
+            <circle cx="6" cy="13" r="0.85" fill="currentColor" stroke="none" />
+          </g>
+
+          <g id="icon-block" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="8,2 16,2 22,8 22,16 16,22 8,22 2,16 2,8" />
+            <line x1="8.2" y1="8.2" x2="15.8" y2="15.8" />
+            <line x1="15.8" y1="8.2" x2="8.2" y2="15.8" />
+          </g>
+
+          <g id="icon-endpoint" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2.4" />
+            <polyline points="8.4,9 5.6,12 8.4,15" />
+            <polyline points="15.6,9 18.4,12 15.6,15" />
+          </g>
+
+          <g id="icon-merge" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="5" cy="6" r="2.5" />
+            <circle cx="5" cy="18" r="2.5" />
+            <circle cx="19" cy="12" r="2.5" />
+            <line x1="7.5" y1="6" x2="16.5" y2="11" />
+            <line x1="7.5" y1="18" x2="16.5" y2="13" />
+          </g>
+
+          <g id="icon-cache" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="7" width="15" height="15" rx="2.2" />
+            <rect x="7" y="2" width="15" height="15" rx="2.2" />
+          </g>
+        </defs>
+
+        <!-- connecting lines -->
+        <g fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.85">
+          <line x1="146" y1="230" x2="186" y2="230" marker-end="url(#arrow)" />
+          <line x1="336" y1="230" x2="376" y2="230" marker-end="url(#arrow)" />
+          <line x1="626" y1="230" x2="666" y2="230" marker-end="url(#arrow)" />
+        </g>
+        <text x="646" y="216" text-anchor="middle" font-family="var(--font-mono)" font-size="10.5" fill="currentColor" opacity="0.7">X-Is-Crawler,</text>
+        <text x="646" y="256" text-anchor="middle" font-family="var(--font-mono)" font-size="10.5" fill="currentColor" opacity="0.7">X-Origin-User-Agent</text>
+
+        <!-- fork -->
+        <line x1="926" y1="230" x2="966" y2="230" fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.85" />
+        <circle cx="966" cy="230" r="3.5" fill="currentColor" opacity="0.85" />
+
+        <polyline points="966,230 990,230 990,105 1010,105" fill="none" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#arrowAccent)" />
+        <text x="996" y="163" text-anchor="start" font-family="var(--font-mono)" font-size="10.5" fill="var(--accent-ink)">crawler +</text>
+        <text x="996" y="176" text-anchor="start" font-family="var(--font-mono)" font-size="10.5" fill="var(--accent-ink)">eligible</text>
+
+        <line x1="966" y1="230" x2="1010" y2="230" fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.85" marker-end="url(#arrow)" />
+        <text x="988" y="216" text-anchor="middle" font-family="var(--font-mono)" font-size="10.5" fill="currentColor" opacity="0.7">default</text>
+
+        <polyline points="966,230 990,230 990,395 1010,395" fill="none" stroke="var(--block)" stroke-width="1.4" opacity="0.9" marker-end="url(#arrowBlock)" />
+        <text x="996" y="330" text-anchor="start" font-family="var(--font-mono)" font-size="10.5" fill="var(--block)" opacity="0.9">bad UA /</text>
+        <text x="996" y="343" text-anchor="start" font-family="var(--font-mono)" font-size="10.5" fill="var(--block)" opacity="0.9">bad path</text>
+
+        <!-- Viewer -->
+        <rect x="16" y="180" width="130" height="100" rx="10" fill="var(--surface)" stroke="var(--border)" stroke-width="1.2" filter="url(#cardShadow)" />
+        <circle cx="81" cy="208" r="17" fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.85" />
+        <use href="#icon-browser" x="72.5" y="199.5" width="17" height="17" color="currentColor" />
+        <text x="81" y="253" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">Viewer</text>
+        <text x="81" y="268" text-anchor="middle" font-size="10.5" fill="currentColor" opacity="0.65">browser or bot</text>
+
+        <!-- CloudFront -->
+        <rect x="186" y="180" width="150" height="100" rx="10" fill="var(--surface)" stroke="var(--border)" stroke-width="1.2" filter="url(#cardShadow)" />
+        <circle cx="261" cy="207" r="18" fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.85" />
+        <use href="#icon-network" x="252" y="198" width="18" height="18" color="currentColor" />
+        <text x="261" y="253" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">CloudFront</text>
+        <text x="261" y="268" text-anchor="middle" font-size="10.5" fill="currentColor" opacity="0.65">edge location</text>
+
+        <!-- Viewer Request Lambda -->
+        <rect x="376" y="125" width="250" height="210" rx="10" fill="var(--surface)" stroke="var(--border)" stroke-width="1.2" filter="url(#cardShadow)" />
+        <rect x="481" y="143" width="40" height="40" rx="10" fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.85" />
+        <use href="#icon-bolt" x="491" y="153" width="20" height="20" color="currentColor" />
+        <text x="501" y="197" text-anchor="middle" font-family="var(--font-mono)" font-size="10" letter-spacing="0.05em" fill="currentColor" opacity="0.55">VIEWER REQUEST</text>
+        <text x="501" y="215" text-anchor="middle" font-size="14" font-weight="700" fill="currentColor">Detect crawler</text>
+        <text x="501" y="230" text-anchor="middle" font-family="var(--font-mono)" font-size="10.5" fill="currentColor" opacity="0.6">&hellip;-Http</text>
+        <line x1="392" y1="240" x2="610" y2="240" stroke="currentColor" opacity="0.15" />
+        <text x="392" y="258" font-size="11" fill="currentColor">&bull; match UA against crawler /</text>
+        <text x="400" y="272" font-size="11" fill="currentColor">AI-agent lists</text>
+        <text x="392" y="288" font-size="11" fill="currentColor">&bull; trust WAF x-is-ai-agent</text>
+        <text x="392" y="304" font-size="11" fill="currentColor">&bull; set X-Is-Crawler,</text>
+        <text x="400" y="318" font-size="11" fill="currentColor">X-Origin-User-Agent</text>
+
+        <!-- Origin Request Lambda -->
+        <rect x="666" y="125" width="260" height="210" rx="10" fill="var(--surface)" stroke="var(--border)" stroke-width="1.2" filter="url(#cardShadow)" />
+        <rect x="776" y="143" width="40" height="40" rx="10" fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.85" />
+        <use href="#icon-bolt" x="786" y="153" width="20" height="20" color="currentColor" />
+        <text x="796" y="197" text-anchor="middle" font-family="var(--font-mono)" font-size="10" letter-spacing="0.05em" fill="currentColor" opacity="0.55">ORIGIN REQUEST</text>
+        <text x="796" y="215" text-anchor="middle" font-size="14" font-weight="700" fill="currentColor">Route or block</text>
+        <text x="796" y="230" text-anchor="middle" font-family="var(--font-mono)" font-size="10.5" fill="currentColor" opacity="0.6">&hellip;-Redirect</text>
+        <line x1="682" y1="240" x2="910" y2="240" stroke="currentColor" opacity="0.15" />
+        <text x="682" y="258" font-size="11" fill="currentColor">&bull; block bad-spider UA,</text>
+        <text x="690" y="272" font-size="11" fill="currentColor">duplicate/bad paths</text>
+        <text x="682" y="288" font-size="11" fill="currentColor">&bull; check X-Is-Crawler +</text>
+        <text x="690" y="302" font-size="11" fill="currentColor">x-is-prerender / x-prerender</text>
+        <text x="682" y="318" font-size="11" fill="currentColor">&bull; skip non-HTML, non-SPA paths</text>
+
+        <!-- Prerender service -->
+        <rect x="1010" y="35" width="320" height="140" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.3" filter="url(#cardShadow)" />
+        <circle cx="1170" cy="65" r="22" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.4" />
+        <use href="#icon-render" x="1159" y="54" width="22" height="22" color="var(--accent-ink)" />
+        <text x="1170" y="113" text-anchor="middle" font-size="14" font-weight="700" fill="var(--accent-ink)">Prerender service</text>
+        <text x="1170" y="131" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--accent-ink)">prerender.infra.cbd.int</text>
+        <text x="1170" y="148" text-anchor="middle" font-size="10.5" fill="var(--accent-ink)" opacity="0.85">renders via headless browser</text>
+        <text x="1170" y="162" text-anchor="middle" font-size="10.5" fill="var(--accent-ink)" opacity="0.85">(url &rarr; HTML), returns markup</text>
+
+        <!-- Origin server -->
+        <rect x="1010" y="175" width="320" height="110" rx="10" fill="var(--surface)" stroke="var(--border)" stroke-width="1.2" filter="url(#cardShadow)" />
+        <circle cx="1170" cy="205" r="20" fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.85" />
+        <use href="#icon-server" x="1160" y="195" width="20" height="20" color="currentColor" />
+        <text x="1170" y="250" text-anchor="middle" font-size="14" font-weight="700" fill="currentColor">Origin server</text>
+        <text x="1170" y="267" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="currentColor" opacity="0.7">US-WWW / GEO-WWW</text>
+
+        <!-- Blocked -->
+        <rect x="1010" y="345" width="230" height="100" rx="10" fill="var(--block-soft)" stroke="var(--block)" stroke-width="1.3" filter="url(#cardShadow)" />
+        <circle cx="1125" cy="373" r="18" fill="var(--surface)" stroke="var(--block)" stroke-width="1.4" />
+        <use href="#icon-block" x="1116" y="364" width="18" height="18" color="var(--block)" />
+        <text x="1125" y="413" text-anchor="middle" font-size="13" font-weight="700" fill="var(--block)">Blocked</text>
+        <text x="1125" y="430" text-anchor="middle" font-family="var(--font-mono)" font-size="10.5" fill="var(--block)" opacity="0.9">403 / 404</text>
+
+      </svg>
+    </div>
+    <figcaption>
+      The viewer-request function tags crawler traffic; the origin-request function decides, per request,
+      whether CloudFront fetches from the prerender service, the real origin, or short-circuits to a block
+      response. The response for either surviving path returns to the viewer through CloudFront unchanged.
+    </figcaption>
+  </figure>
+
+  <p class="note">
+    Both functions live in this repo: <code>redirect-crawler/app.js</code> (origin request) and
+    <code>http-header/app.js</code> (viewer request).
+  </p>
+
+  <h2>What each hop actually checks</h2>
+  <p class="section-lede">The full decision logic behind the two boxes above.</p>
+  <div class="hop-grid">
+    <div class="hop-card">
+      <span class="tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="13,1.5 4.5,14 10.8,14 9,22.5 19,9.5 12.2,9.5" /></svg>
+        viewer request
+      </span>
+      <h3>serverless-is-crawler-Http</h3>
+      <p class="fn-name">http-header/app.js</p>
+      <ul>
+        <li>Runs <code>es6-crawler-detect</code> plus a small custom list (e.g. <code>uptimerobot</code>) against the User-Agent.</li>
+        <li>Flags AI agents (<code>gptbot</code>, <code>claude</code>, <code>perplexity</code>, …) by trusting an upstream WAF header <code>x-is-ai-agent</code> first, falling back to a UA substring match.</li>
+        <li>If either check hits, sets <code>X-Is-Crawler: true</code> and forwards the original UA as <code>X-Origin-User-Agent</code> so it survives the origin rewrite.</li>
+        <li>Short-circuits entirely if <code>x-is-prerender</code> is already set — a request that's already been prerendered isn't re-flagged.</li>
+      </ul>
+    </div>
+    <div class="hop-card">
+      <span class="tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="13,1.5 4.5,14 10.8,14 9,22.5 19,9.5 12.2,9.5" /></svg>
+        origin request
+      </span>
+      <h3>serverless-is-crawler-Redirect</h3>
+      <p class="fn-name">redirect-crawler/app.js</p>
+      <ul>
+        <li>Blocks known bad-spider UAs (403) and duplicate or malformed <code>countries</code>/<code>kb</code> paths (404) before anything else runs.</li>
+        <li>Requires <code>X-Is-Crawler: true</code> <em>and</em> <code>prerender</code> still eligible to act.</li>
+        <li>Eligibility drops to false for non-HTML asset extensions, when <code>x-is-prerender</code> or <code>x-prerender</code> says so, or — on <code>www.cbd.int</code> — outside the allow-listed SPA sections.</li>
+        <li>When still eligible, rewrites the origin to <code>prerender.infra.cbd.int</code> with path <code>/api/render-html?_escaped_fragment_=true&amp;url=…</code>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Inside the prerender service</h2>
+  <p class="section-lede">
+    <code>prerender.infra.cbd.int</code> is a small Express app (<code>url-to-html-api</code>) wrapped around
+    one shared headless Chrome instance, not a request-per-invocation function.
+  </p>
+
+  <figure>
+    <div class="diagram-scroll">
+      <svg viewBox="0 0 1360 340" role="img" aria-label="The render-html endpoint deduplicates concurrent requests for the same URL, queues them against one shared headless Chrome instance capped at ten tabs, transforms the rendered page, and returns cacheable HTML — or rejects non-CBD hostnames and render timeouts.">
+
+        <g fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.85">
+          <line x1="236" y1="120" x2="276" y2="120" marker-end="url(#arrow)" />
+          <line x1="496" y1="120" x2="536" y2="120" marker-end="url(#arrow)" />
+          <line x1="756" y1="120" x2="796" y2="120" marker-end="url(#arrow)" />
+          <line x1="1056" y1="120" x2="1096" y2="120" marker-end="url(#arrow)" />
+        </g>
+
+        <line x1="926" y1="220" x2="926" y2="250" fill="none" stroke="var(--block)" stroke-width="1.4" opacity="0.9" marker-end="url(#arrowBlock)" />
+        <text x="934" y="234" font-family="var(--font-mono)" font-size="10.5" fill="var(--block)" opacity="0.9">non-CBD host, or</text>
+        <text x="934" y="247" font-family="var(--font-mono)" font-size="10.5" fill="var(--block)" opacity="0.9">render timeout</text>
+
+        <!-- 1: Express endpoint -->
+        <rect x="16" y="20" width="220" height="200" rx="10" fill="var(--surface)" stroke="var(--border)" stroke-width="1.2" filter="url(#cardShadow)" />
+        <circle cx="126" cy="56" r="18" fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.85" />
+        <use href="#icon-endpoint" x="117" y="47" width="18" height="18" color="currentColor" />
+        <text x="126" y="100" text-anchor="middle" font-size="13.5" font-weight="700" fill="currentColor">Express endpoint</text>
+        <text x="126" y="116" text-anchor="middle" font-family="var(--font-mono)" font-size="10.5" fill="currentColor" opacity="0.6">GET /api/render-html</text>
+        <line x1="32" y1="126" x2="220" y2="126" stroke="currentColor" opacity="0.15" />
+        <text x="32" y="144" font-size="11" fill="currentColor">&bull; url query param</text>
+        <text x="32" y="158" font-size="11" fill="currentColor">&bull; 15-minute request timeout</text>
+
+        <!-- 2: Inflight dedup -->
+        <rect x="276" y="20" width="220" height="200" rx="10" fill="var(--surface)" stroke="var(--border)" stroke-width="1.2" filter="url(#cardShadow)" />
+        <circle cx="386" cy="56" r="18" fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.85" />
+        <use href="#icon-merge" x="377" y="47" width="18" height="18" color="currentColor" />
+        <text x="386" y="100" text-anchor="middle" font-size="13.5" font-weight="700" fill="currentColor">Inflight dedup</text>
+        <text x="386" y="116" text-anchor="middle" font-family="var(--font-mono)" font-size="10.5" fill="currentColor" opacity="0.6">keyed by url</text>
+        <line x1="292" y1="126" x2="480" y2="126" stroke="currentColor" opacity="0.15" />
+        <text x="292" y="144" font-size="11" fill="currentColor">&bull; concurrent hits for the</text>
+        <text x="300" y="158" font-size="11" fill="currentColor">same URL join one render</text>
+        <text x="292" y="174" font-size="11" fill="currentColor">&bull; polls every 1s until the</text>
+        <text x="300" y="188" font-size="11" fill="currentColor">shared render finishes</text>
+
+        <!-- 3: Render queue -->
+        <rect x="536" y="20" width="220" height="200" rx="10" fill="var(--surface)" stroke="var(--border)" stroke-width="1.2" filter="url(#cardShadow)" />
+        <circle cx="646" cy="56" r="18" fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.85" />
+        <use href="#icon-browser" x="637" y="47" width="18" height="18" color="currentColor" />
+        <text x="646" y="100" text-anchor="middle" font-size="13.5" font-weight="700" fill="currentColor">Render queue</text>
+        <text x="646" y="116" text-anchor="middle" font-family="var(--font-mono)" font-size="10.5" fill="currentColor" opacity="0.6">one shared Chrome</text>
+        <line x1="552" y1="126" x2="740" y2="126" stroke="currentColor" opacity="0.15" />
+        <text x="552" y="144" font-size="11" fill="currentColor">&bull; polls the queue every</text>
+        <text x="560" y="158" font-size="11" fill="currentColor">200ms</text>
+        <text x="552" y="174" font-size="11" fill="currentColor">&bull; caps at 10 concurrent tabs,</text>
+        <text x="560" y="188" font-size="11" fill="currentColor">waits for one to free up</text>
+
+        <!-- 4: Puppeteer page -->
+        <rect x="796" y="20" width="260" height="200" rx="10" fill="var(--surface)" stroke="var(--border)" stroke-width="1.2" filter="url(#cardShadow)" />
+        <circle cx="926" cy="56" r="18" fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.85" />
+        <use href="#icon-render" x="917" y="47" width="18" height="18" color="currentColor" />
+        <text x="926" y="100" text-anchor="middle" font-size="13.5" font-weight="700" fill="currentColor">Puppeteer page</text>
+        <text x="926" y="116" text-anchor="middle" font-family="var(--font-mono)" font-size="10.5" fill="currentColor" opacity="0.6">renderHtml()</text>
+        <line x1="812" y1="126" x2="1040" y2="126" stroke="currentColor" opacity="0.15" />
+        <text x="812" y="144" font-size="11" fill="currentColor">&bull; only *.cbd.int / cbddev.xyz /</text>
+        <text x="820" y="158" font-size="11" fill="currentColor">localhost hostnames allowed</text>
+        <text x="812" y="174" font-size="11" fill="currentColor">&bull; tags same-domain calls</text>
+        <text x="820" y="188" font-size="11" fill="currentColor">x-is-prerender: true</text>
+        <text x="812" y="204" font-size="11" fill="currentColor">&bull; strips &lt;script&gt;, inlines CSS,</text>
+        <text x="820" y="218" font-size="11" fill="currentColor">rewrites /app/* links</text>
+
+        <!-- 5: HTML response -->
+        <rect x="1096" y="20" width="248" height="200" rx="10" fill="var(--surface)" stroke="var(--border)" stroke-width="1.2" filter="url(#cardShadow)" />
+        <circle cx="1220" cy="56" r="18" fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.85" />
+        <use href="#icon-cache" x="1211" y="47" width="18" height="18" color="currentColor" />
+        <text x="1220" y="100" text-anchor="middle" font-size="13.5" font-weight="700" fill="currentColor">HTML response</text>
+        <text x="1220" y="116" text-anchor="middle" font-family="var(--font-mono)" font-size="10.5" fill="currentColor" opacity="0.6">200 OK</text>
+        <line x1="1112" y1="126" x2="1332" y2="126" stroke="currentColor" opacity="0.15" />
+        <text x="1112" y="144" font-size="11" fill="currentColor">&bull; Cache-Control: public,</text>
+        <text x="1120" y="158" font-size="11" fill="currentColor">max-age=7 days</text>
+        <text x="1112" y="174" font-size="11" fill="currentColor">&bull; ?cfCache=false skips it</text>
+
+        <!-- Rejected -->
+        <rect x="796" y="250" width="260" height="80" rx="10" fill="var(--block-soft)" stroke="var(--block)" stroke-width="1.3" filter="url(#cardShadow)" />
+        <circle cx="850" cy="290" r="16" fill="var(--surface)" stroke="var(--block)" stroke-width="1.4" />
+        <use href="#icon-block" x="841" y="281" width="18" height="18" color="var(--block)" />
+        <text x="885" y="286" text-anchor="start" font-size="13" font-weight="700" fill="var(--block)">Rejected / error</text>
+        <text x="885" y="303" text-anchor="start" font-family="var(--font-mono)" font-size="10.5" fill="var(--block)" opacity="0.9">400 or 500</text>
+
+      </svg>
+    </div>
+    <figcaption>
+      Every render request is keyed by URL and joined to any identical request already in flight, then queued
+      against a single headless Chrome instance capped at ten open tabs. A timeout during navigation flags
+      the browser for a restart on the next queue tick.
+    </figcaption>
+  </figure>
+
+  <p class="note">
+    This is also the source of the <code>process inflight running N</code> / <code>no request in flight</code>
+    log lines — <code>processInflightRequest()</code> in <code>src/renderer.js</code> logs on every 200ms/2s
+    poll tick, whether or not there's work to do.
+  </p>
+
+  <h2>Header contract between the two functions</h2>
+  <p class="section-lede">What gets read and written at each hop.</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Header</th><th>Set by</th><th>Read by</th><th>Purpose</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="hdr">X-Is-Crawler</td>
+          <td class="set-by">viewer request</td>
+          <td class="set-by">origin request</td>
+          <td class="purpose">Marks the request as crawler/bot traffic; gates the prerender rewrite.</td>
+        </tr>
+        <tr>
+          <td class="hdr">X-Origin-User-Agent</td>
+          <td class="set-by">viewer request</td>
+          <td class="set-by">— (passed through)</td>
+          <td class="purpose">Preserves the real UA once the origin becomes the prerender service.</td>
+        </tr>
+        <tr>
+          <td class="hdr">X-Is-AI-Agent</td>
+          <td class="set-by">viewer request</td>
+          <td class="set-by">— (passed through)</td>
+          <td class="purpose">Distinguishes AI/LLM crawlers from traditional search-engine bots.</td>
+        </tr>
+        <tr>
+          <td class="hdr">x-is-prerender</td>
+          <td class="set-by">upstream / prior hop</td>
+          <td class="set-by">both functions</td>
+          <td class="purpose">When true, tells both hops this request was already prerendered — skip re-flagging and re-rewriting.</td>
+        </tr>
+        <tr>
+          <td class="hdr">x-prerender</td>
+          <td class="set-by">upstream / prior hop</td>
+          <td class="set-by">origin request</td>
+          <td class="purpose">Secondary opt-out: value <code>1</code> forces <code>prerender = false</code>.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer>Behaviors and origin groups (US-WWW / GEO-WWW) per the CloudFront console configuration.</footer>
+</main>
