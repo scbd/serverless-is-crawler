@@ -13,14 +13,14 @@ Resources:
       CodeUri: http-header/
       Role: !GetAtt LambdaEdgeFunctionRole.Arn
       Handler: app.lambdaHandler
-      Runtime: nodejs10.x
+      Runtime: nodejs22.x
   RedirectCrawlerFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: redirect-crawler/
       Role: !GetAtt LambdaEdgeFunctionRole.Arn
       Handler: app.lambdaHandler
-      Runtime: nodejs10.x
+      Runtime: nodejs22.x
 
   LambdaEdgeFunctionRole:
     Type: "AWS::IAM::Role"
