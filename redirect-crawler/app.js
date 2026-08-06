@@ -4,7 +4,47 @@ exports.lambdaHandler = (event, context, callback) => {
     let is_crawler  = undefined;
     let prerender   = true;
     let host;
-    
+
+    const badSpiders = [
+      'spider-feedback@bytedance.com'
+    ]
+    let userAgent = request['headers']['user-agent'][0].value;
+
+    for (var index in badSpiders) {
+      if(userAgent.indexOf(badSpiders[index]) >= 0){
+        callback(null, { status: '403' });
+        return;
+      }
+    }
+
+    //TO handle wrong paths indexed by bots
+    // eg  https://absch.cbd.int/zh/database/IRCC/ABSCH-IRCC-FR-265514/countries/countries/countries/KI
+    //.    https://absch.cbd.int/zh/database/IRCC/ABSCH-IRCC-IN-265059/kb/tags/about/countries/kb/faqs
+    const badDuplicatePaths = [
+      /\/countries\//ig,
+      /\/kb\//ig
+    ];
+
+    for (var path in badDuplicatePaths) {
+      const matches = request.uri.match(badDuplicatePaths[path]);
+      if(matches?.length > 1){
+        callback(null, { status: '404' });
+        return;
+      }
+    }
+
+    const badPaths = [
+      /database\/.*\/(countries|kb)/i,
+      /pdf\/.*\/(countries|kb)/i
+    ];
+
+    for (var path in badPaths) {
+      if(request.uri.match(badPaths[path])?.length){
+        callback(null, { status: '404' });
+        return;
+      }
+    }
+
     if ('host' in request['headers']) {
         host = request['headers']['host'][0].value.toLowerCase();
     }
@@ -18,7 +58,13 @@ exports.lambdaHandler = (event, context, callback) => {
         prerender = false;
       }
     }
-    
+
+    if ('x-prerender' in request['headers']) {
+      if(request['headers']['x-prerender'][0].value.toLowerCase() == '1'){
+        prerender = false;
+      }
+    }
+
     // request targets non-html files
     if (request.uri.match(/\.(html|js|json|css|xml|less|png|jpg|jpeg|gif|pdf|txt|ico|rss|zip|mp3|rar|exe|wmv|doc|xls|ppt|docx|xlsx|pptx|avi|mpg|mpeg|tif|wav|mov|psd|ai|mp4|m4a|swf|dat|dmg|iso|flv|m4v|torrent|ttf|woff|svg|eot)/i)) {
       prerender = false;
@@ -31,8 +77,10 @@ exports.lambdaHandler = (event, context, callback) => {
     
     if (is_crawler === 'true' && prerender == true) {
       
-        let prerenderDomain = 'npirw8odh2.execute-api.us-east-1.amazonaws.com'  
-        let path = '/Prod/render-html?url=https://' + request.headers['host'][0].value;
+        // let prerenderDomain = 'npirw8odh2.execute-api.us-east-1.amazonaws.com'
+        // let path = '/Prod/render-html?url=https://' + request.headers['host'][0].value;
+        let prerenderDomain = 'prerender.infra.cbd.int'
+        let path = '/api/render-html?_escaped_fragment_=true&url=https://' + request.headers['host'][0].value;
         
         request.headers['host'] = [{ key: 'host', value: prerenderDomain}];
         
